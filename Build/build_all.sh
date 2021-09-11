@@ -12,7 +12,7 @@ do
     if [ $basedir != "." ]; then
         echo $basedir
         cd ./Build
-        ./buildcommon.sh $basedir
+        ./common.sh $basedir
         cd -
     fi
 done
