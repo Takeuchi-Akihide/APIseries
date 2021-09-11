@@ -1,5 +1,5 @@
 tmp
-./*/result/*
+*/result/*
 
 # Prerequisites
 *.d
