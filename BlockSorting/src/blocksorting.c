@@ -15,32 +15,87 @@
 
 int main(int argc, char **argv) {
     // 入力の受け付け
-    if (argc <= 2 || argc > 4) {
+    if (argc < 2 || argc > 4) {
         fprintf(stderr, "引数1: e(encode) or d(decode) or q(encode+decode)\n");
         fprintf(stderr, "引数2: 暗号化/復号化したい文字列\n");
         fprintf(stderr, "引数3: 復号化の場合のキー番号\n");
         return EXIT_FAILURE;
     }
-    
-    char blockSortString[INPUT_MAX+1];
-    int key;
 
-    if (strlen(argv[2]) > INPUT_MAX) {
-        fprintf(stderr, "文字列は%d字以内で入力してください\n", INPUT_MAX);
+    FILE *fp_read1;
+    if ((fp_read1 = fopen(argv[1], "r")) == NULL) {
+        fprintf(stderr, "ファイルが開けません。\n");
+		return EXIT_FAILURE;
+    }
+    
+    char blockSortString[INPUT_MAX];
+    int key;
+    char input[INPUT_MAX];
+    char pattern[3];
+
+    key = file_read(fp_read1, input, pattern);
+    if (key == -1) {
+        fprintf(stderr, "ファイルの中身が適切ではありません\n");
         return EXIT_FAILURE;
     }
-    if (argv[1][0] == 'q' || argv[1][0] == 'Q') {
-        key = encode(argv[2], blockSortString);
+
+    if (pattern[0] == 'q' || pattern[0] == 'Q') {
+        printf("pattern:\nq\n");
+        key = encode(input, blockSortString);
         decode(blockSortString, key);
-    } else if (argv[1][0] == 'e' || argv[1][0] == 'E') {
-        key = encode(argv[2], blockSortString);
-    } else if (argv[1][0] == 'd' || argv[1][0] == 'D') {
-        if (argc == 4) {
-            key = (int) strtol(argv[3], NULL, 10);
-        }
-        decode(argv[2], key);
+    } else if (pattern[0] == 'e' || pattern[0] == 'E') {
+        printf("pattern:\nd\n");
+        key = encode(input, blockSortString);
+    } else if (pattern[0] == 'd' || pattern[0] == 'D') {
+        printf("pattern:\ne\n");
+        decode(input, key);
     }
     return EXIT_SUCCESS;
+}
+
+// ファイルを読み込んでpattern(encode/decode)、inputする文字列を渡し、keyを返す
+int file_read(FILE *fp_read1, char *input, char *pattern) {
+    char str[INPUT_MAX];
+    int key;
+    int i;
+
+    // 1~2行目：pattern
+    fgets(str, INPUT_MAX, fp_read1);
+    if (strncmp(str, "pattern:", 8) != 0) {
+        return -1;
+    }
+    fgets(str, INPUT_MAX, fp_read1);
+    i = 0;
+    while (str[i] != '\n') {
+        pattern[i] = str[i];
+        i++;
+    }
+    pattern[i] = '\0';
+
+    // 3~4行目：input
+    fgets(str, INPUT_MAX, fp_read1);
+    if (strncmp(str, "code:", 5) != 0 && strncmp(str, "string:", 7) != 0) {
+        return -1;
+    }
+    fgets(str, INPUT_MAX, fp_read1);
+    i = 0;
+    while (str[i] != '\n') {
+        input[i] = str[i];
+        i++;
+    }
+    input[i] = '\0';
+
+    // 5~6行目：key
+    if (pattern[0] == 'd') {
+        fgets(str, INPUT_MAX, fp_read1);
+        if (strncmp(str, "key:", 4) != 0) {
+            return 0;
+        }
+        fgets(str, INPUT_MAX, fp_read1);
+        key = strtol(str, NULL, 10);
+    }
+    
+    return key;
 }
 
 int encode(char *inputStr, char *blockSortString) {
@@ -88,7 +143,7 @@ void decode(char *inputStr, int key) {
     }
     outputStr[inputLen] = '\0';
 
-    printf("outputStr:\n%s\n", outputStr);
+    printf("string:\n%s\n", outputStr);
 }
 
 void sort1(int *array, char *str, int n) {
