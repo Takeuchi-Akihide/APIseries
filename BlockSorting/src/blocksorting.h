@@ -15,9 +15,8 @@ typedef struct DecodeArray {
 } DecodeArray_T;
 
 int encode(char *inputStr, char *blockSortString);
-void rotation(char *str, int len);
-void sort1(int n, char str[][n]);
 void decode(char *inputStr, int key);
+void sort1(int *array, char *str, int n);
 void sort2(DecodeArray_T *str, int n);
 
 #endif // BLOCKSORTING_H_
