@@ -14,6 +14,7 @@ typedef struct DecodeArray {
     int  num;
 } DecodeArray_T;
 
+int file_read(FILE *fp_read1, char *input, char *pattern);
 int encode(char *inputStr, char *blockSortString);
 void decode(char *inputStr, int key);
 void sort1(int *array, char *str, int n);
