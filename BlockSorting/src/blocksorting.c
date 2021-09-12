@@ -43,6 +43,32 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+int encode(char *inputStr, char *blockSortString) {
+    int inputLen = strlen(inputStr);
+    char rStr[inputLen*2 + 1];
+    sprintf(rStr, "%s%s", inputStr, inputStr);
+    int encodeArray[inputLen];
+    int key;
+    int i, j;
+
+    for (i=0; i<inputLen; i++) {
+        encodeArray[i] = i;
+    }
+    sort1(encodeArray, rStr, inputLen);
+
+    for (i=0; i<inputLen; i++) {
+        blockSortString[i] = rStr[encodeArray[i]+inputLen-1];
+        if (encodeArray[i] == 0) {
+            key = i;
+        }
+    }
+    blockSortString[inputLen] = '\0';
+    printf("code:\n%s\n", blockSortString);
+    printf("key:\n%d\n", key);
+
+    return key;
+}
+
 void decode(char *inputStr, int key) {
     int inputLen = strlen(inputStr);
     DecodeArray_T decodeArray[inputLen];
@@ -65,60 +91,24 @@ void decode(char *inputStr, int key) {
     printf("outputStr:\n%s\n", outputStr);
 }
 
-
-int encode(char *inputStr, char *blockSortString) {
-    char *rStr = inputStr;
-    int inputLen = strlen(inputStr);
-    char encodeArray[inputLen][inputLen+1];
-    int line;
-    int i, j;
-
-    for (i=0; i<inputLen; i++) {
-        for (j=0; j<inputLen; j++) {
-            encodeArray[i][j] = rStr[j];
-        }
-        encodeArray[i][inputLen] = '\0';
-        rotation(rStr, inputLen);
-    }
-    sort1(inputLen, encodeArray);
-    // for (i=0; i<inputLen; i++) {
-    //     printf("encodeArray[%d]:%s\n", i, encodeArray[i]);
-    // }
-    // printf("input: %s\n", inputStr);
-
-    for (i=0; i<inputLen; i++) {
-        blockSortString[i] = encodeArray[i][inputLen-1];
-        if (!strncmp(inputStr, encodeArray[i], inputLen)) {
-            line = i;
-        }
-    }
-    blockSortString[inputLen] = '\0';
-    printf("code:\n%s\n", blockSortString);
-    printf("key:\n%d\n", line);
-
-    return line;
-}
-
-void rotation(char *str, int len) {
-    char tmp = str[0];
-    for (int i=1; i<len; i++) {
-        str[i-1] = str[i];
-    }
-    str[len-1] = tmp;
-}
-
-void sort1(int n, char str[][n+1]) {
+void sort1(int *array, char *str, int n) {
     int i, j, k;
-    char tmp[n+1];            /* 作業用ポインタ */
+    char *str_i, *str_j;
+    int tmp;
 	
     for (i=0; i<n-1; i++) {
         for (j=i+1; j<n; j++) {
-            if ((strncmp(str[j], str[i], n)) < 0) {
-                strncpy(tmp, str[i], n);
-                strncpy(str[i], str[j], n);
-                strncpy(str[j], tmp, n);
+            str_i = str + array[i];
+            str_j = str + array[j];
+            if ((strncmp(str_j, str_i, n)) < 0) {
+                tmp = array[i];
+                array[i] = array[j];
+                array[j] = tmp;
             }
         }
+        // for (k=0; k<n; k++)            /* ソートの途中経過を表示 */
+        //     printf("%s  ", str + array[k]);
+        // printf("\n");
     }
 }
 
@@ -129,12 +119,13 @@ void sort2(DecodeArray_T *str, int n) {
     for (i=0; i<n-1; i++) {
         for (j=i+1; j<n; j++) {
             if (str[j].p < str[i].p || (str[j].p == str[i].p) && str[j].num < str[i].num) {
-                // tmp.p = str[i].p;
-                // tmp.num = str[i].num;
                 tmp = str[i];
                 str[i] = str[j];
                 str[j] = tmp;
             }
         }
+        // for (k=0; k<n; k++)            /* ソートの途中経過を表示 */
+        //     printf("%s  ", str[k]);
+        // printf("\n");
     }
 }
