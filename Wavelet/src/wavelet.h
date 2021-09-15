@@ -22,6 +22,8 @@ typedef struct Node {
     struct Node         *right;
 } Node_T;
 
+
+int count_pnum(Node_T *node, int len, unsigned int bit, int depth);
 void make_key(unsigned int bit, Node_T *node, int depth);
 unsigned int bit_check(Chara_T *chara_pointer, char p);
 void new_node (Node_T *node, int depth);

@@ -66,12 +66,40 @@ int main(int argc, char **argv) {
         make_key(bit, node_start, depth);
     }
 
-    printf("depth=%d\n", depth);
-    print_chara(chara_start);
-    print_node(node_start);
-
     // 出現回数をカウントしプリント
+    while (chara_pointer) {
+        int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
+        printf("%c:\t%d\n", chara_pointer->p, num);        
+        chara_pointer = chara_pointer->next;
+    }
 
+    // printf("depth=%d\n", depth);
+    // print_chara(chara_start);
+    // print_node(node_start);
+}
+int count_pnum(Node_T *node, int len, unsigned int bit, int depth) {
+    Node_T *nodep = node;
+    int d = 1;
+    int n = len;
+    unsigned int b;
+
+    while (nodep) {
+        int count = 0;
+        b = (bit >> (depth - d) & 1);
+        for (int i=0; i<n; i++) {
+            if (b == (int) ((nodep->key >> i) & 1)) {
+                count++;
+            }
+        }
+        if (b == 1) {
+            nodep = nodep->right;
+        } else {
+            nodep = nodep->left;
+        }
+        n = count;
+        d++;
+    }
+    return n;
 }
 
 void make_key(unsigned int bit, Node_T *node, int depth) {
@@ -84,6 +112,10 @@ void make_key(unsigned int bit, Node_T *node, int depth) {
         } else {
             make_key(bit, node->left, depth - 1);
         }
+    } else {
+        // depth=0のときはkeyの更新だけ行う
+        // node->key = (node->key << 1) + (bit & 1);
+        // node->cnt++;
     }
 }
 
