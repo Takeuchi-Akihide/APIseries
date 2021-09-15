@@ -15,7 +15,6 @@
 
 
 int main(int argc, char **argv) {
-
     // 引数の受け取り
     if (argc != 2) {
         fprintf(stderr, "文字列を1つ入力してください\n");
@@ -66,18 +65,61 @@ int main(int argc, char **argv) {
         make_key(bit, node_start, depth);
     }
 
-    printf("depth=%d\n", depth);
-    print_chara(chara_start);
-    print_node(node_start);
-
     // 出現回数をカウントしプリント
+    while (chara_pointer) {
+        int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
+        printf("%c:\t%d\n", chara_pointer->p, num);        
+        chara_pointer = chara_pointer->next;
+    }
 
+    // printf("depth=%d\n", depth);
+    // printf("MAXSIZE: %ld\n", MAX_SIZE);
+    // print_chara(chara_start);
+    // print_node(node_start);
+}
+
+int count_pnum(Node_T *node, int len, unsigned int bit, int depth) {
+    Node_T *nodep = node;
+    int d = 1;
+    int n = len;
+    unsigned int b;
+
+    while (nodep) {
+        int count = 0;
+        b = (bit >> (depth - d) & 1);
+        for (int i=0; i<n; i++) {
+            if (count_key(nodep->key_node, i, b)){
+            // if (b == (int) ((nodep->key_node >> i) & 1)) {
+                count++;
+            }
+        }
+        if (b == 1) {
+            nodep = nodep->right;
+        } else {
+            nodep = nodep->left;
+        }
+        n = count;
+        d++;
+    }
+    return n;
+}
+
+unsigned int count_key(Key_T *key_node, int i, unsigned int b) {
+    Key_T *node = key_node;
+    int times = i / KEY_MAX;
+    i = i % KEY_MAX;
+
+    for (int j=0; j<times; j++) {
+        node = node->next;
+    }
+    return b == ((node->key >> i) & 1);
 }
 
 void make_key(unsigned int bit, Node_T *node, int depth) {
     if (depth > 0) {
         unsigned int key_bit = (bit >> (depth - 1)) & 1;
-        node->key = (node->key << 1) + key_bit;
+        key_increment(node->key_node, key_bit);
+        // node->key = (node->key << 1) + key_bit;
         node->cnt++;
         if (key_bit) {
             make_key(bit, node->right, depth - 1);
@@ -85,6 +127,22 @@ void make_key(unsigned int bit, Node_T *node, int depth) {
             make_key(bit, node->left, depth - 1);
         }
     }
+}
+
+void key_increment(Key_T *key_node, unsigned int key_bit) {
+    Key_T *node = key_node;
+    while (node->next) {
+        node = node->next;
+    }
+    node->key = (node->key << 1) + key_bit;
+    node->count++;
+
+    if (node->count == KEY_MAX) {
+        node->next = calloc(1, sizeof(Key_T));
+        // key_prev->next = key_node;
+        // key_node = key_prev;
+    }
+    // return key_node;
 }
 
 unsigned int bit_check(Chara_T *chara_pointer, char p) {
@@ -102,12 +160,16 @@ void new_node (Node_T *node, int depth) {
     if (depth > 0) {
         Node_T *node_left = calloc(1, sizeof(Node_T));
         Node_T *node_right = calloc(1, sizeof(Node_T));
+        Key_T *node_key = calloc(1, sizeof(Key_T));
 
         new_node(node_left, depth-1);
         new_node(node_right, depth-1);
 
         node->left = node_left;
         node->right = node_right;
+        node->key_node = node_key;
+    } else {
+        node->key_node = calloc(1, sizeof(Key_T));
     }
 }
 
@@ -145,17 +207,36 @@ void print_node(Node_T *node_pointer) {
     }
     Node_T *pointer = node_pointer;
     printf("pointer: %p\n", pointer);
-    print_key(pointer->key, pointer->cnt);
+    print_key(pointer->key_node, pointer->cnt);
     printf("left: %p\n", pointer->left);
     printf("right: %p\n", pointer->right);
     print_node(pointer->left);
     print_node(pointer->right);
 }
 
-void print_key(unsigned long long key, int cnt) {
+// 入力と逆順に出力する
+void print_key(Key_T *key_node, int cnt) {
+    int times = cnt / KEY_MAX;
+    cnt = cnt % KEY_MAX;
     printf("key: ");
-    for (int i=cnt-1; i>=0; i--) {
-        printf("%lld", (key >> i) & 1);
+    for (int i=0; i<=times; i++) {
+        if (i == times) {
+            for (int j=0; j<cnt; j++) {
+                printf("%d", (key_node->key >> j) & 1);
+            }
+        } else {
+            for (int j=0; j<KEY_MAX; j++) {
+                printf("%d", (key_node->key >> j) & 1);
+            }
+            key_node = key_node->next;
+        }
     }
+    // while (key_node) {
+    //     for (int i=cnt-1; i>=0; i--) {
+    //         printf("%d", (key_node->key >> i) & 1);
+    //     }
+    //     cnt = KEY_MAX;
+    //     key_node = key_node->next;
+    // }
     printf("\n");
 }
