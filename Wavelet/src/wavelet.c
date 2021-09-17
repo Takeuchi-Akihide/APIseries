@@ -11,24 +11,49 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "wavelet.h"
 
+/* グローバル変数 */
+Wavelet_T wavelet;
+Func_Interface_T func[MAX_FUNC] = {
+    {   "help",         wavelet_help        },
+    {   "access",       wavelet_access      },
+    {   "accessall",    wavelet_access_all  },
+    {   "rank",         wavelet_rank        },
+    {   "select",       wavelet_select      },
+    {   "quantile",     wavelet_quantile    },
+    {   "topk",         wavelet_topk        },
+    {   "intersect",    wavelet_intersect   },
+    {   "nodeprint",    print_node          },
+    {   "charprint",    print_chara         },
+};
 
 int main(int argc, char **argv) {
+    int i;
+    char str[MAX_STR+1];
+
     // 引数の受け取り
-    if (argc != 2) {
+    if (argc == 1) {
+        srand((unsigned) time(NULL));
+        for (i=0; i<MAX_STR; i++) {
+            str[i] = 'A' + rand() % ALPHA_NUM;
+        }
+        str[MAX_STR] = '\0';
+        printf("%s\n", str);
+    } else if (argc == 2) {
+        strncpy(str, argv[1], MAX_STR);
+    } else {
         fprintf(stderr, "文字列を1つ入力してください\n");
         return EXIT_FAILURE;
     }
 
     // 文字の種類の数をカウント
-    char *str = argv[1];
     int str_len = 0;
     unsigned int cnt = 0;
     Chara_T *chara_start = calloc(1, sizeof(Chara_T));
     Chara_T *chara_pointer = chara_start;
     Chara_T *chara_last;
-    int i;
 
     while (str[str_len] != '\0') {
         if (chara_start->p == '\0') {
@@ -65,12 +90,37 @@ int main(int argc, char **argv) {
         make_key(bit, node_start, depth);
     }
 
-    // 出現回数をカウントしプリント
-    while (chara_pointer) {
-        int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
-        printf("%c:\t%d\n", chara_pointer->p, num);        
-        chara_pointer = chara_pointer->next;
+    // グローバル変数に登録
+    wavelet.node_start = node_start;
+    wavelet.chara_start = chara_start;
+    wavelet.len = str_len;
+    wavelet.depth = depth;
+
+    while (1) {
+        char input[32];
+        printf("操作を入力してください。\n'help' -> 操作一覧を表示します\n");
+        scanf("%31s", input);
+
+        if (strncmp(input, "q", 32) == 0) {
+            return 0;
+        // } else if (strncmp(input, "h", strlen(input)) == 0){
+        //     print_hintMessage();
+        } else {
+            for (i=0; i<MAX_FUNC; i++) {
+                if (strncmp(input, func[i].FuncName, 32) == 0){
+                    func[i].Func1();
+                }
+            }
+        }
     }
+
+
+    // 出現回数をカウントしプリント
+    // while (chara_pointer) {
+    //     int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
+    //     printf("%c:\t%d\n", chara_pointer->p, num);        
+    //     chara_pointer = chara_pointer->next;
+    // }
 
     // printf("depth=%d\n", depth);
     // printf("MAXSIZE: %ld\n", MAX_SIZE);
@@ -139,6 +189,7 @@ void key_increment(Key_T *key_node, unsigned int key_bit) {
 
     if (node->count == KEY_MAX) {
         node->next = calloc(1, sizeof(Key_T));
+        node->next->prev = node;
         // key_prev->next = key_node;
         // key_node = key_prev;
     }
@@ -167,6 +218,8 @@ void new_node (Node_T *node, int depth) {
 
         node->left = node_left;
         node->right = node_right;
+        node->left->parent = node;
+        node->right->parent = node;
         node->key_node = node_key;
     } else {
         node->key_node = calloc(1, sizeof(Key_T));
@@ -190,8 +243,8 @@ void new_chara(Chara_T *chara_pointer, char str, unsigned int i) {
     chara_pointer->next = new;
 }
 
-void print_chara(Chara_T *chara_pointer) {
-    Chara_T *pointer = chara_pointer;
+int print_chara(void) {
+    Chara_T *pointer = wavelet.chara_start;
     while (pointer) {
         printf("pointer: %p\n", pointer);
         printf("p: %c\n", pointer->p);
@@ -201,42 +254,80 @@ void print_chara(Chara_T *chara_pointer) {
     }
 }
 
-void print_node(Node_T *node_pointer) {
+int print_node(void) {
+    print_node_roop(wavelet.node_start);
+}
+
+void print_node_roop(Node_T *node_pointer) {
     if (node_pointer == NULL) {
         return;
     }
     Node_T *pointer = node_pointer;
     printf("pointer: %p\n", pointer);
     print_key(pointer->key_node, pointer->cnt);
+    printf("parent: %p\n", pointer->parent);
     printf("left: %p\n", pointer->left);
     printf("right: %p\n", pointer->right);
-    print_node(pointer->left);
-    print_node(pointer->right);
+    print_node_roop(pointer->left);
+    print_node_roop(pointer->right);
 }
 
-// 入力と逆順に出力する
 void print_key(Key_T *key_node, int cnt) {
     int times = cnt / KEY_MAX;
     cnt = cnt % KEY_MAX;
     printf("key: ");
     for (int i=0; i<=times; i++) {
         if (i == times) {
-            for (int j=0; j<cnt; j++) {
+            for (int j=cnt-1; j>=0; j--) {
                 printf("%d", (key_node->key >> j) & 1);
             }
         } else {
-            for (int j=0; j<KEY_MAX; j++) {
+            for (int j=KEY_MAX-1; j>0; j--) {
                 printf("%d", (key_node->key >> j) & 1);
             }
             key_node = key_node->next;
         }
     }
-    // while (key_node) {
-    //     for (int i=cnt-1; i>=0; i--) {
-    //         printf("%d", (key_node->key >> i) & 1);
-    //     }
-    //     cnt = KEY_MAX;
-    //     key_node = key_node->next;
-    // }
     printf("\n");
+}
+
+int wavelet_help(void) {
+    printf("help\n");
+}
+
+int wavelet_access(void){ 
+    printf("access\n");
+    return 0;
+}
+
+int wavelet_access_all(void){
+    Chara_T *chara_pointer = wavelet.chara_start;
+
+    while (chara_pointer) {
+        int num = count_pnum(wavelet.node_start, wavelet.len, chara_pointer->bit, wavelet.depth);
+        printf("%c:\t%d\n", chara_pointer->p, num);        
+        chara_pointer = chara_pointer->next;
+    }
+    return 0;
+}
+
+
+int wavelet_rank(void) {
+    printf("wavelet_rank\n");
+}
+
+int wavelet_select(void){
+    printf("wavelet_select\n");
+}
+
+int wavelet_quantile(void){
+    printf("wavelet_quantile\n");
+}
+
+int wavelet_topk(void){
+    printf("wavelet_topk\n");
+}
+
+int wavelet_intersect(void){
+    printf("wavelet_intersect\n");
 }
