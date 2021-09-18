@@ -11,24 +11,49 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "wavelet.h"
 
+/* グローバル変数 */
+Wavelet_T wavelet;
+Func_Interface_T func[MAX_FUNC] = {
+    {   "help",         wavelet_help        },
+    {   "access",       wavelet_access      },
+    {   "rankall",      wavelet_rank_all    },
+    {   "rank",         wavelet_rank        },
+    {   "select",       wavelet_select      },
+    {   "quantile",     wavelet_quantile    },
+    {   "topk",         wavelet_topk        },
+    {   "intersect",    wavelet_intersect   },
+    {   "nodeprint",    print_node          },
+    {   "charprint",    print_chara         },
+};
 
 int main(int argc, char **argv) {
+    int i;
+    char str[MAX_STR+1];
+
     // 引数の受け取り
-    if (argc != 2) {
+    if (argc == 1) {
+        srand((unsigned) time(NULL));
+        for (i=0; i<MAX_STR; i++) {
+            str[i] = 'A' + rand() % ALPHA_NUM;
+        }
+        str[MAX_STR] = '\0';
+        printf("%s\n", str);
+    } else if (argc == 2) {
+        strncpy(str, argv[1], MAX_STR);
+    } else {
         fprintf(stderr, "文字列を1つ入力してください\n");
         return EXIT_FAILURE;
     }
 
     // 文字の種類の数をカウント
-    char *str = argv[1];
     int str_len = 0;
     unsigned int cnt = 0;
     Chara_T *chara_start = calloc(1, sizeof(Chara_T));
     Chara_T *chara_pointer = chara_start;
     Chara_T *chara_last;
-    int i;
 
     while (str[str_len] != '\0') {
         if (chara_start->p == '\0') {
@@ -65,12 +90,40 @@ int main(int argc, char **argv) {
         make_key(bit, node_start, depth);
     }
 
-    // 出現回数をカウントしプリント
-    while (chara_pointer) {
-        int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
-        printf("%c:\t%d\n", chara_pointer->p, num);        
-        chara_pointer = chara_pointer->next;
+    // グローバル変数に登録
+    wavelet.node_start = node_start;
+    wavelet.chara_start = chara_start;
+    wavelet.len = str_len;
+    wavelet.depth = depth;
+
+    while (1) {
+        char input[32];
+        printf("操作を入力してください。\n'help' -> 操作一覧を表示します\n");
+        scanf("%31s", input);
+
+        if (strncmp(input, "q", 32) == 0) {
+            return 0;
+        } else if (isdigit(input[0])) {
+            int inputNum = (int) strtol(input, NULL, 10);
+            if (inputNum >= 0 && inputNum < MAX_FUNC) {
+                func[inputNum].Func1();
+            }
+        } else {
+            for (i=0; i<MAX_FUNC; i++) {
+                if (strncmp(input, func[i].FuncName, 32) == 0){
+                    func[i].Func1();
+                }
+            }
+        }
     }
+
+
+    // 出現回数をカウントしプリント
+    // while (chara_pointer) {
+    //     int num = count_pnum(node_start, str_len, chara_pointer->bit, depth);
+    //     printf("%c:\t%d\n", chara_pointer->p, num);        
+    //     chara_pointer = chara_pointer->next;
+    // }
 
     // printf("depth=%d\n", depth);
     // printf("MAXSIZE: %ld\n", MAX_SIZE);
@@ -139,6 +192,7 @@ void key_increment(Key_T *key_node, unsigned int key_bit) {
 
     if (node->count == KEY_MAX) {
         node->next = calloc(1, sizeof(Key_T));
+        node->next->prev = node;
         // key_prev->next = key_node;
         // key_node = key_prev;
     }
@@ -167,6 +221,8 @@ void new_node (Node_T *node, int depth) {
 
         node->left = node_left;
         node->right = node_right;
+        node->left->parent = node;
+        node->right->parent = node;
         node->key_node = node_key;
     } else {
         node->key_node = calloc(1, sizeof(Key_T));
@@ -190,8 +246,8 @@ void new_chara(Chara_T *chara_pointer, char str, unsigned int i) {
     chara_pointer->next = new;
 }
 
-void print_chara(Chara_T *chara_pointer) {
-    Chara_T *pointer = chara_pointer;
+int print_chara(void) {
+    Chara_T *pointer = wavelet.chara_start;
     while (pointer) {
         printf("pointer: %p\n", pointer);
         printf("p: %c\n", pointer->p);
@@ -201,42 +257,155 @@ void print_chara(Chara_T *chara_pointer) {
     }
 }
 
-void print_node(Node_T *node_pointer) {
+int print_node(void) {
+    print_node_roop(wavelet.node_start);
+}
+
+void print_node_roop(Node_T *node_pointer) {
     if (node_pointer == NULL) {
         return;
     }
     Node_T *pointer = node_pointer;
     printf("pointer: %p\n", pointer);
     print_key(pointer->key_node, pointer->cnt);
+    printf("parent: %p\n", pointer->parent);
     printf("left: %p\n", pointer->left);
     printf("right: %p\n", pointer->right);
-    print_node(pointer->left);
-    print_node(pointer->right);
+    print_node_roop(pointer->left);
+    print_node_roop(pointer->right);
 }
 
-// 入力と逆順に出力する
 void print_key(Key_T *key_node, int cnt) {
     int times = cnt / KEY_MAX;
     cnt = cnt % KEY_MAX;
     printf("key: ");
     for (int i=0; i<=times; i++) {
         if (i == times) {
-            for (int j=0; j<cnt; j++) {
+            for (int j=cnt-1; j>=0; j--) {
                 printf("%d", (key_node->key >> j) & 1);
             }
         } else {
-            for (int j=0; j<KEY_MAX; j++) {
+            for (int j=KEY_MAX-1; j>0; j--) {
                 printf("%d", (key_node->key >> j) & 1);
             }
             key_node = key_node->next;
         }
     }
-    // while (key_node) {
-    //     for (int i=cnt-1; i>=0; i--) {
-    //         printf("%d", (key_node->key >> i) & 1);
-    //     }
-    //     cnt = KEY_MAX;
-    //     key_node = key_node->next;
-    // }
     printf("\n");
+}
+
+int wavelet_help(void) {
+    printf("You can use these commands\n");
+    for (int i=0; i<MAX_FUNC; i++) {
+        printf("%d / %s\n", i, func[i].FuncName);
+    }
+    printf("q -> exit\n");
+}
+
+int wavelet_access(void){
+    char input[32];
+    while (1) {
+        printf("access(i): i番目の値を返します。\n1以上%d以下の数値を入力してください。\n数値以外を入力したら終了します。\n->", wavelet.len);
+        scanf("%31s", input);
+        // printf("input: %s\n", input);
+        int inputNum = (int) strtol(input, NULL, 10);
+        if (inputNum >= 1 && inputNum <= wavelet.len) {
+            // inputのビット番号を求める
+            int bit = get_bitnum(wavelet.node_start, inputNum);
+
+            // ビット番号から文字列を求める
+            char c = get_chara(wavelet.chara_start, bit);
+            printf("%c\n", c);
+        } else {
+            printf("値が存在しません。終了します。\n");
+            printf("----------------------------\n\n");
+            return 0;
+        }
+        
+    }
+}
+
+int wavelet_rank_all(void){
+    Chara_T *chara_pointer = wavelet.chara_start;
+
+    while (chara_pointer) {
+        int num = count_pnum(wavelet.node_start, wavelet.len, chara_pointer->bit, wavelet.depth);
+        printf("%c:\t%d\n", chara_pointer->p, num);        
+        chara_pointer = chara_pointer->next;
+    }
+    return 0;
+}
+
+
+int wavelet_rank(void) {
+    printf("wavelet_rank\n");
+}
+
+int wavelet_select(void){
+    printf("wavelet_select\n");
+}
+
+int wavelet_quantile(void){
+    printf("wavelet_quantile\n");
+}
+
+int wavelet_topk(void){
+    printf("wavelet_topk\n");
+}
+
+int wavelet_intersect(void){
+    printf("wavelet_intersect\n");
+}
+
+
+int get_bitnum(Node_T *node_start, int num) {
+    int bit = 0;
+    roop_bitcount(node_start, num, &bit);
+    return bit;
+}
+
+void roop_bitcount(Node_T *node, int num, int *bit) {
+    int i, j;
+    int count[2] = {0};     // 0,1の数をそれぞれ入れる
+    int bit_now = 0;
+    Key_T *keynode = node->key_node;
+    num--;
+    int times = num / KEY_MAX;
+    num = num % KEY_MAX;
+    
+    for (i=0; i<=times; i++) {
+        if (i == times) {
+            for (j=1; j<=num+1; j++) {
+                bit_now = (keynode->key >> (keynode->count - j)) & 1;
+                count[bit_now]++;
+            }
+            break;
+        } else {
+            for (j=1; j<=KEY_MAX; j++) {
+                bit_now = (keynode->key >> (keynode->count - j)) & 1;
+                count[bit_now]++;
+            }
+        }
+        keynode = keynode->next;
+    }
+
+    *bit = (*bit << 1) + bit_now;
+    if (bit_now) {
+        node = node->right;
+    } else {
+        node = node->left;
+    }
+    if (node) {
+        roop_bitcount(node, count[bit_now], bit);
+    }
+}
+
+// ビット番号から文字列を求める
+char get_chara(Chara_T *chara_start, int bit) {
+    int i;
+    Chara_T *chara = chara_start;
+    for (i=0; i<bit; i++) {
+        chara = chara->next;
+    }
+    return chara->p;
 }
