@@ -142,7 +142,6 @@ int count_pnum(Node_T *node, int len, unsigned int bit, int depth) {
         b = (bit >> (depth - d) & 1);
         for (int i=0; i<n; i++) {
             if (count_key(nodep->key_node, i, b)){
-            // if (b == (int) ((nodep->key_node >> i) & 1)) {
                 count++;
             }
         }
@@ -160,12 +159,12 @@ int count_pnum(Node_T *node, int len, unsigned int bit, int depth) {
 unsigned int count_key(Key_T *key_node, int i, unsigned int b) {
     Key_T *node = key_node;
     int times = i / KEY_MAX;
-    i = i % KEY_MAX;
+    i = i % KEY_MAX + 1;
 
     for (int j=0; j<times; j++) {
         node = node->next;
     }
-    return b == ((node->key >> i) & 1);
+    return b == ((node->key >> (node->count - i)) & 1);
 }
 
 void make_key(unsigned int bit, Node_T *node, int depth) {
@@ -182,6 +181,8 @@ void make_key(unsigned int bit, Node_T *node, int depth) {
     }
 }
 
+// 1つ目のノードに0-31, 2つ目に32-63…が入る。
+// 各ノードの中では、最上位ビットが0、最下位ビットが31を表す。
 void key_increment(Key_T *key_node, unsigned int key_bit) {
     Key_T *node = key_node;
     while (node->next) {
@@ -305,17 +306,18 @@ int wavelet_help(void) {
 int wavelet_access(void){
     char input[32];
     while (1) {
-        printf("access(i): i番目の値を返します。\n1以上%d以下の数値を入力してください。\n数値以外を入力したら終了します。\n->", wavelet.len);
+        printf("<<<access(i)>>>\n  i番目の値を返します。\n");
+        printf("  1以上%d以下の数値を入力してください。\n  数値以外を入力したら終了します。\n->", wavelet.len);
         scanf("%31s", input);
         // printf("input: %s\n", input);
         int inputNum = (int) strtol(input, NULL, 10);
         if (inputNum >= 1 && inputNum <= wavelet.len) {
             // inputのビット番号を求める
-            int bit = get_bitnum(wavelet.node_start, inputNum);
+            unsigned int bit = get_bitnum(wavelet.node_start, inputNum);
 
             // ビット番号から文字列を求める
             char c = get_chara(wavelet.chara_start, bit);
-            printf("%c\n", c);
+            printf("T[%d] = '%c'\n",inputNum, c);
         } else {
             printf("値が存在しません。終了します。\n");
             printf("----------------------------\n\n");
@@ -326,18 +328,55 @@ int wavelet_access(void){
 }
 
 int wavelet_rank_all(void){
-    Chara_T *chara_pointer = wavelet.chara_start;
+    char input[32];
+    while (1) {
+        printf("<<<RankAll(i)>>>\n  各文字が1からi番目までに出現する回数を返します。\n");
+        printf("  iを1以上%d以下の数値を入力してください。\n  数値以外を入力したら終了します。\n->", wavelet.len);
+        scanf("%31s", input);
+        int inputNum = (int) strtol(input, NULL, 10);
+        if (inputNum < 1 || inputNum > wavelet.len) {
+            printf("値が存在しません。終了します。\n");
+            printf("----------------------------\n\n");
+            return 0;
+        }
 
-    while (chara_pointer) {
-        int num = count_pnum(wavelet.node_start, wavelet.len, chara_pointer->bit, wavelet.depth);
-        printf("%c:\t%d\n", chara_pointer->p, num);        
-        chara_pointer = chara_pointer->next;
+        Chara_T *chara_pointer = wavelet.chara_start;
+        while (chara_pointer) {
+            int num = count_pnum(wavelet.node_start, inputNum, chara_pointer->bit, wavelet.depth);
+            printf("%c:\t%d\n", chara_pointer->p, num);        
+            chara_pointer = chara_pointer->next;
+        }
     }
-    return 0;
 }
 
 
 int wavelet_rank(void) {
+    char input[32];
+    while (1) {
+        printf("<<<Rank(c, i)>>>\n  1からi番目までにcが出現する回数を返します。\n");
+        printf("  iを1以上%d以下の数値を入力してください。\n  数値以外を入力したら終了します。\n->", wavelet.len);
+        scanf("%31s", input);
+        int inputNum = (int) strtol(input, NULL, 10);
+        if (inputNum < 1 || inputNum > wavelet.len) {
+            printf("値が存在しません。終了します。\n");
+            printf("----------------------------\n\n");
+            return 0;
+        }
+        printf("検索したい文字を1文字入力してください。\n->");
+        scanf("%1s", input);
+
+        // 文字からビット番号を求める
+        unsigned int bit;
+        if ((bit = bit_check(wavelet.chara_start, input[0])) == 0xffffffff) {
+            printf("文字が存在しません。数値入力からやり直してください。\n");
+            printf("----------------------------\n\n");
+            continue;
+        }
+
+        // 出現回数を求める
+        int num = count_pnum(wavelet.node_start, inputNum, bit, wavelet.depth);
+        printf("%c[1:%d] : %d\n", input[0], inputNum, num);
+    }
     printf("wavelet_rank\n");
 }
 
@@ -358,13 +397,13 @@ int wavelet_intersect(void){
 }
 
 
-int get_bitnum(Node_T *node_start, int num) {
-    int bit = 0;
+unsigned int get_bitnum(Node_T *node_start, int num) {
+    unsigned int bit = 0;
     roop_bitcount(node_start, num, &bit);
     return bit;
 }
 
-void roop_bitcount(Node_T *node, int num, int *bit) {
+void roop_bitcount(Node_T *node, int num, unsigned int *bit) {
     int i, j;
     int count[2] = {0};     // 0,1の数をそれぞれ入れる
     int bit_now = 0;
@@ -401,7 +440,7 @@ void roop_bitcount(Node_T *node, int num, int *bit) {
 }
 
 // ビット番号から文字列を求める
-char get_chara(Chara_T *chara_start, int bit) {
+char get_chara(Chara_T *chara_start, unsigned int bit) {
     int i;
     Chara_T *chara = chara_start;
     for (i=0; i<bit; i++) {
