@@ -9,9 +9,23 @@
 // #define MAX_SIZE    30
 #define KEY_MAX     32
 #define MAX_SIZE     sizeof(int) * 8
-#define MAX_FUNC    10
+// #define MAX_FUNC    10
 #define MAX_STR     1000
 #define ALPHA_NUM   26
+
+typedef enum {
+    HELP,       
+    ACCESS,
+    RANKALL,
+    RANK,
+    SELECT,
+    QUANTILE,
+    TOPK,
+    INTERSECT,
+    NODEPRINT,
+    CHARAPRINT,
+    MAX_FUNC,
+} FUNC_T;
 
 typedef struct Chara_T {
     char            p;
@@ -64,12 +78,15 @@ int print_chara(void);
 int print_node(void);
 int wavelet_help(void);
 int wavelet_access(void);
-int wavelet_access_all(void);
+int wavelet_rank_all(void);
 int wavelet_rank(void);
 int wavelet_select(void);
 int wavelet_quantile(void);
 int wavelet_topk(void);
 int wavelet_intersect(void);
+int get_bitnum(Node_T *node_start, int num);
+void roop_bitcount(Node_T *node, int num, int *bit);
+char get_chara(Chara_T *chara_start, int bit);
 // int wavelet_rangefreq(void);
 // int wavelet_rangelist(void);
 // int wavelet_rangemaxk(void);

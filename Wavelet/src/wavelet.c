@@ -19,7 +19,7 @@ Wavelet_T wavelet;
 Func_Interface_T func[MAX_FUNC] = {
     {   "help",         wavelet_help        },
     {   "access",       wavelet_access      },
-    {   "accessall",    wavelet_access_all  },
+    {   "rankall",      wavelet_rank_all    },
     {   "rank",         wavelet_rank        },
     {   "select",       wavelet_select      },
     {   "quantile",     wavelet_quantile    },
@@ -103,8 +103,11 @@ int main(int argc, char **argv) {
 
         if (strncmp(input, "q", 32) == 0) {
             return 0;
-        // } else if (strncmp(input, "h", strlen(input)) == 0){
-        //     print_hintMessage();
+        } else if (isdigit(input[0])) {
+            int inputNum = (int) strtol(input, NULL, 10);
+            if (inputNum >= 0 && inputNum < MAX_FUNC) {
+                func[inputNum].Func1();
+            }
         } else {
             for (i=0; i<MAX_FUNC; i++) {
                 if (strncmp(input, func[i].FuncName, 32) == 0){
@@ -292,15 +295,37 @@ void print_key(Key_T *key_node, int cnt) {
 }
 
 int wavelet_help(void) {
-    printf("help\n");
+    printf("You can use these commands\n");
+    for (int i=0; i<MAX_FUNC; i++) {
+        printf("%d / %s\n", i, func[i].FuncName);
+    }
+    printf("q -> exit\n");
 }
 
-int wavelet_access(void){ 
-    printf("access\n");
-    return 0;
+int wavelet_access(void){
+    char input[32];
+    while (1) {
+        printf("access(i): i番目の値を返します。\n1以上%d以下の数値を入力してください。\n数値以外を入力したら終了します。\n->", wavelet.len);
+        scanf("%31s", input);
+        // printf("input: %s\n", input);
+        int inputNum = (int) strtol(input, NULL, 10);
+        if (inputNum >= 1 && inputNum <= wavelet.len) {
+            // inputのビット番号を求める
+            int bit = get_bitnum(wavelet.node_start, inputNum);
+
+            // ビット番号から文字列を求める
+            char c = get_chara(wavelet.chara_start, bit);
+            printf("%c\n", c);
+        } else {
+            printf("値が存在しません。終了します。\n");
+            printf("----------------------------\n\n");
+            return 0;
+        }
+        
+    }
 }
 
-int wavelet_access_all(void){
+int wavelet_rank_all(void){
     Chara_T *chara_pointer = wavelet.chara_start;
 
     while (chara_pointer) {
@@ -330,4 +355,57 @@ int wavelet_topk(void){
 
 int wavelet_intersect(void){
     printf("wavelet_intersect\n");
+}
+
+
+int get_bitnum(Node_T *node_start, int num) {
+    int bit = 0;
+    roop_bitcount(node_start, num, &bit);
+    return bit;
+}
+
+void roop_bitcount(Node_T *node, int num, int *bit) {
+    int i, j;
+    int count[2] = {0};     // 0,1の数をそれぞれ入れる
+    int bit_now = 0;
+    Key_T *keynode = node->key_node;
+    num--;
+    int times = num / KEY_MAX;
+    num = num % KEY_MAX;
+    
+    for (i=0; i<=times; i++) {
+        if (i == times) {
+            for (j=1; j<=num+1; j++) {
+                bit_now = (keynode->key >> (keynode->count - j)) & 1;
+                count[bit_now]++;
+            }
+            break;
+        } else {
+            for (j=1; j<=KEY_MAX; j++) {
+                bit_now = (keynode->key >> (keynode->count - j)) & 1;
+                count[bit_now]++;
+            }
+        }
+        keynode = keynode->next;
+    }
+
+    *bit = (*bit << 1) + bit_now;
+    if (bit_now) {
+        node = node->right;
+    } else {
+        node = node->left;
+    }
+    if (node) {
+        roop_bitcount(node, count[bit_now], bit);
+    }
+}
+
+// ビット番号から文字列を求める
+char get_chara(Chara_T *chara_start, int bit) {
+    int i;
+    Chara_T *chara = chara_start;
+    for (i=0; i<bit; i++) {
+        chara = chara->next;
+    }
+    return chara->p;
 }
