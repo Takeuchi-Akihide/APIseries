@@ -1,4 +1,4 @@
-/* chain.h
+/* wavelet.h
  *  Created on: 2021/09/13
  *      Author: a_takeuchi
  */
@@ -19,9 +19,6 @@ typedef enum {
     RANKALL,
     RANK,
     SELECT,
-    QUANTILE,
-    TOPK,
-    INTERSECT,
     NODEPRINT,
     CHARAPRINT,
     MAX_FUNC,
@@ -81,17 +78,10 @@ int wavelet_access(void);
 int wavelet_rank_all(void);
 int wavelet_rank(void);
 int wavelet_select(void);
-int wavelet_quantile(void);
-int wavelet_topk(void);
-int wavelet_intersect(void);
 unsigned int get_bitnum(Node_T *node_start, int num);
 void roop_bitcount(Node_T *node, int num, unsigned int *bit);
 char get_chara(Chara_T *chara_start, unsigned int bit);
-// int wavelet_rangefreq(void);
-// int wavelet_rangelist(void);
-// int wavelet_rangemaxk(void);
-// int wavelet_rangemink(void);
-// int wavelet_prevvalue(void);
-// int wavelet_nextvalue(void);
+int select_pos(Node_T *node_start, unsigned int bit, int num);
+int select_from1Node(Node_T *node, int bit_now, int num);
 
 #endif /* WAVELET_H_ */
