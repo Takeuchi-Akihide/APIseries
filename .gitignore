@@ -1,6 +1,10 @@
 tmp
 */result/*
 BlockSorting/src/*.txt
+.vscode
+
+# python object files
+*.pyc
 
 # Prerequisites
 *.d
