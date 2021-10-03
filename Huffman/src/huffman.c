@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
     Chara_T *chara_pointer = chara_start;
     Chara_T *chara_last;
     int i;
+    clock_t start = clock();
 
     while (str[str_len] != '\0') {
         if (chara_start->p == '\0') {
@@ -81,6 +82,8 @@ int main(int argc, char **argv) {
     count_bit(chara_parent);
     print_chara_bit(chara_start);
     int bitcount = print_charaToBit(chara_start, str, str_len);
+    clock_t end = clock();
+    printf("time: %.9f s\n", (float) (end-start) / CLOCKS_PER_SEC);
     float efficiency = (float) bitcount / (float) str_len;
     printf("%d種類、%d文字の文字列が%dビットで表せました。\n1文字あたり%.2fビットです。\n", str_kind, str_len, bitcount, efficiency);
     // print_chara(chara_start);
