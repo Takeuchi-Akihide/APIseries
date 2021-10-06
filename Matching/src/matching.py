@@ -21,8 +21,6 @@ class Student:
 
 
 def main():
-    print(__name__)
-
     hospital_num = 10
     student_num = 25
 
